@@ -1,19 +1,24 @@
 import Prelude
 import System.Environment
 
---data Field =
---    Field Int |
---    Field Int Int |
---    Field Int Int Int |
---    Field Int Int Int Int |
---    Field Int Int Int Int Int |
---    Field Int Int Int Int Int Int |
---    Field Int Int Int Int Int Int Int |
---    Field Int Int Int Int Int Int Int Int |
---    Field Int Int Int Int Int Int Int Int Int
---data Permutation = Permutation Field Field Field Field Field Field Field Field Field
+data Field a = Field { r :: Int -- row index
+                     , c :: Int -- col index
+                     , b :: Int -- box index
+                     , d :: [a] -- data
+                     } deriving(Show)
 
-main = do
-    args <- getArgs
-    sudokuBoard <- readFile $ head args
-    putStr sudokuBoard
+hasClosure x = (==) ((length x) - 1) . length . filter (==x)
+
+exclude x = filter (`notElem` x)
+
+excludeClosures :: (Eq a) => [[a]] -> [[a]]
+excludeClosures [] = []
+excludeClosures (x:xs) = x :
+                       if hasClosure x xs
+                       then excludeClosures (map (exclude x) xs)
+                       else excludeClosures xs
+
+--main = do
+--    args <- getArgs
+--    sudokuBoard <- readFile $ head args
+--    putStr sudokuBoard
