@@ -7,43 +7,47 @@ data Field a = Field { r :: Int -- row index
                      , c :: Int -- col index
                      , b :: Int -- box index
                      , d :: [a] -- data
-                     }
+                     } deriving(Eq)
+
+showsField :: (Show a) => Field a -> ShowS
+showsField f = shows (r f, c f, b f, d f)
+
+instance Show a => Show (Field a) where
+    showsPrec _ x = showsField x
+
+readsField :: (Read a) => ReadS (Field a)
+readsField s = [(Field {r=ri,c=ci,b=bi,d=df},t) | ((ri, ci, bi, df),t) <- reads s]
+
+instance Read a => Read (Field a) where
+    readsPrec _ s = readsField s
 
 type Board a = [Field a]
 
-sortByPosition :: [Field a] -> [Field a]
+sortByPosition :: Board a -> Board a
 sortByPosition = sortBy (comparing r) . sortBy (comparing c)
 
-sortByDataSize :: [Field a] -> [Field a]
+sortByDataSize :: Board a -> Board a
 sortByDataSize = sortBy (comparing (\x -> (length . d) x))
 
---sortAscendingByRow :: [Field a] -> [Field a]
---sortAscendingByRow = sortBy (comparing r)
+hasClosure :: (Foldable t, Eq (t a)) => t a -> [t a] -> Bool
+hasClosure x xs = if xLength < xClosures
+                  then error ("Closure size exceeds field size.")
+                  else xLength == xClosures
+                  where (xLength, xClosures) = (length x, length $ filter (== x) xs)
 
---sortAscendingByCol :: [Field a] -> [Field a]
---sortAscendingByCol = sortBy (comparing c)
+excludeClosure :: (Eq a) => [a] -> [[a]] -> [[a]]
+excludeClosure _ [] = []
+excludeClosure x (y:ys) = (if x == y then y else filter (`notElem` x) y) : (excludeClosure x ys)
 
---sortAscendingByBox :: [Field a] -> [Field a]
---sortAscendingByBox = sortBy (comparing b)
-
-showsBoard :: (Show a) => Board a -> ShowS
-showsBoard = shows . map d . sortByPosition
-
--- TODO
---readsBoard :: (Read a) => ReadS (Board a)
---readsBoard =
-
---hasClosure x = (==) ((length x) - 1) . length . filter (== x)
-hasClosure x = (==) (length x) . length . filter (== x)
-
-excludeClosure x y = if x == y then y else filter (`notElem` x) y
+_excludeClosures :: Eq a => [[a]] -> [[a]] -> [[a]]
+_excludeClosures [] ys = ys
+_excludeClosures (x:xs) ys = if hasClosure x ys && ys /= zs
+                             then _excludeClosures zs zs
+                             else _excludeClosures xs ys
+                             where zs = excludeClosure x ys
 
 excludeClosures :: (Eq a) => [[a]] -> [[a]]
-excludeClosures [] = []
-excludeClosures (x:xs) = x :
-                       if hasClosure x xs
-                       then excludeClosures (map (excludeClosure x) xs)
-                       else excludeClosures xs
+excludeClosures xs = _excludeClosures xs xs
 
 --main = do
 --    args <- getArgs
