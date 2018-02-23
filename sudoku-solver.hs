@@ -1,6 +1,6 @@
 import Prelude
 import System.Environment
-import Data.List (sortBy)
+import Data.List (sortBy, groupBy)
 import Data.Ord (comparing)
 
 data Field a = Field { r :: Int -- row index
@@ -23,11 +23,20 @@ instance Read a => Read (Field a) where
 
 type Board a = [Field a]
 
+sortByRowIndex :: Board a -> Board a
+sortByRowIndex = sortBy (comparing r)
+
+sortByColIndex :: Board a -> Board a
+sortByColIndex = sortBy (comparing c)
+
+sortByBoxIndex :: Board a -> Board a
+sortByBoxIndex = sortBy (comparing b)
+
 sortByPosition :: Board a -> Board a
 sortByPosition = sortBy (comparing r) . sortBy (comparing c)
 
-sortByDataSize :: Board a -> Board a
-sortByDataSize = sortBy (comparing (\x -> (length . d) x))
+--sortByDataSize :: Board a -> Board a
+--sortByDataSize = sortBy (comparing (\x -> (length . d) x))
 
 hasClosure :: (Foldable t, Eq (t a)) => t a -> [t a] -> Bool
 hasClosure x xs = if xLength < xClosures
@@ -49,7 +58,24 @@ _excludeClosures (x:xs) ys = if hasClosure x ys && ys /= zs
 excludeClosures :: (Eq a) => [[a]] -> [[a]]
 excludeClosures xs = _excludeClosures xs xs
 
---main = do
---    args <- getArgs
---    sudokuBoard <- readFile $ head args
---    putStr sudokuBoard
+--aaa :: [Field a] -> [Field a]
+--aaa fs = zipWith (\f df -> Field {r = r f, c = c f, b = b f, d = df}) fs dfs
+         where dfs = (excludeClosures . map d) fs
+
+--solvePermutations :: Eq a => ([a] -> [a] -> Bool) -> [[a]] -> [[a]]
+--solvePermutations f = concat . map (\x -> excludeClosures (d x)) . groupBy f
+
+--solve board = if board == newBoard
+--              then board
+--              else solve newBoard
+--              where newBoard = (
+--                               solvePermutations (\x -> r x) . sortByRowIndex .
+--                               solvePermutations (\x -> c x) . sortByColIndex .
+--                               solvePermutations (\x -> b x) . sortByBoxIndex
+--                               ) board
+
+main = do
+    args <- getArgs
+    boardString <- readFile $ head args
+    --board = (read boardString)::(Board Int)
+    putStr boardString
