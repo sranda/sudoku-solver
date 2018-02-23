@@ -35,9 +35,6 @@ sortByBoxIndex = sortBy (comparing b)
 sortByPosition :: Board a -> Board a
 sortByPosition = sortBy (comparing r) . sortBy (comparing c)
 
---sortByDataSize :: Board a -> Board a
---sortByDataSize = sortBy (comparing (\x -> (length . d) x))
-
 hasClosure :: (Foldable t, Eq (t a)) => t a -> [t a] -> Bool
 hasClosure x xs = if xLength < xClosures
                   then error ("Closure size exceeds field size.")
@@ -58,21 +55,33 @@ _excludeClosures (x:xs) ys = if hasClosure x ys && ys /= zs
 excludeClosures :: (Eq a) => [[a]] -> [[a]]
 excludeClosures xs = _excludeClosures xs xs
 
---aaa :: [Field a] -> [Field a]
---aaa fs = zipWith (\f df -> Field {r = r f, c = c f, b = b f, d = df}) fs dfs
-         where dfs = (excludeClosures . map d) fs
+excludeClosuresInFields :: Eq a => [Field a] -> [Field a]
+excludeClosuresInFields fs = zipWith (\f df -> Field {r = r f, c = c f, b = b f, d = df}) fs dfs
+                             where dfs = (excludeClosures . map d) fs
 
---solvePermutations :: Eq a => ([a] -> [a] -> Bool) -> [[a]] -> [[a]]
---solvePermutations f = concat . map (\x -> excludeClosures (d x)) . groupBy f
+solvePermutations :: (Eq b, Eq a) => (Field a -> b) -> [Field a] -> [Field a]
+solvePermutations f = concat . map excludeClosuresInFields . groupBy (\f1 f2 -> f f1 == f f2)
 
---solve board = if board == newBoard
---              then board
---              else solve newBoard
---              where newBoard = (
---                               solvePermutations (\x -> r x) . sortByRowIndex .
---                               solvePermutations (\x -> c x) . sortByColIndex .
---                               solvePermutations (\x -> b x) . sortByBoxIndex
---                               ) board
+solutionStepRow :: (Eq a) => Board a -> Board a
+solutionStepRow = solvePermutations r . sortByRowIndex
+
+solutionStepCol :: (Eq a) => Board a -> Board a
+solutionStepCol = solvePermutations c . sortByColIndex
+
+solutionStepBox :: (Eq a) => Board a -> Board a
+solutionStepBox = solvePermutations b . sortByBoxIndex
+
+-- Beware! Here be the lair of bad ugly monads. --
+
+solve board = if board == newBoard
+              then board
+              else --putStr newBoardR
+                   --putStr newBoardC
+                   --putStr newBoard
+                   solve newBoard
+              where newBoard  = solutionStepBox newBoardC
+                    newBoardC = solutionStepCol newBoardR
+                    newBoardR = solutionStepRow board
 
 main = do
     args <- getArgs
