@@ -43,32 +43,44 @@ instance Read a => Read (Field a) where
 
 type Board a = [Field a]
 
+sortByAccessor :: Ord b => (Field a -> b) -> Board a -> Board a
+sortByAccessor accessor = sortBy (comparing accessor)
+
+sortByPosition :: Board a -> Board a
+sortByPosition = sortByAccessor r . sortByAccessor c
+
+equals :: (Eq a) => Board a -> Board a -> Bool
+equals b1 b2 = sortByPosition b1 == sortByPosition b2
+
 excludeClosuresInFields :: Eq a => [Field a] -> [Field a]
 excludeClosuresInFields fs = zipWith (\f df -> Field {r = r f, c = c f, b = b f, d = df}) fs dfs
                              where dfs = (excludeClosures . map d) fs
 
 selectPermutations :: Ord b => (Field a -> b) -> Board a -> [[Field a]]
-selectPermutations accessor = groupBy (\f1 f2 -> accessor f1 == accessor f2) . sortBy (comparing accessor)
+selectPermutations accessor = groupBy (\f1 f2 -> accessor f1 == accessor f2) . sortByAccessor accessor
 
 solvePermutations :: (Ord b, Eq b, Eq a) => (Field a -> b) -> [Field a] -> [Field a]
 solvePermutations accessor = concat . map excludeClosuresInFields . selectPermutations accessor
 
+generateBoardSolutions :: (Ord b, Eq a) => [Field a -> b] -> [Board a] -> [Board a]
+generateBoardSolutions accessors boardHistory =
+    if equals lastBoard newBoard
+    then boardHistory
+    else generateBoardSolutions (tail accessors) (boardHistory ++ [newBoard])
+    where lastBoard = last boardHistory
+          newBoard = solvePermutations (head accessors) lastBoard
+
+solve board = generateBoardSolutions accessorOrder [board]
+              where accessorOrder = r : c : b : accessorOrder
+
 -- Beware! Here be the lair of bad ugly monads. --
 
-solve board = if board == newBoard
-              then board
-              else --putStr newBoardR
-                   --putStr newBoardC
-                   --putStr newBoard
-                   solve newBoard
-              where newBoardB = solvePermutations b board
-                    newBoardC = solvePermutations c newBoardB
-                    newBoardR = solvePermutations r newBoardC
-                    newBoard = newBoardR
+newLines = "\n" : newLines
 
 main = do
     args <- getArgs
-    boardString <- readFile $ head args
+    let fileName = head args
+    boardString <- readFile fileName
     let board = (read boardString)::(Board Int)
-    putStrLn $ show $ solve board
-
+    let solutionString = (foldl (++) "" . zipWith (++) ("" : newLines) . map show) (solve board)
+    writeFile (fileName ++ "_solution") solutionString
