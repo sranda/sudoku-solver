@@ -62,16 +62,22 @@ selectPermutations accessor = groupBy (\f1 f2 -> accessor f1 == accessor f2) . s
 solvePermutations :: (Ord b, Eq b, Eq a) => (Field a -> b) -> [Field a] -> [Field a]
 solvePermutations accessor = concat . map excludeClosuresInFields . selectPermutations accessor
 
-generateBoardSolutions :: (Ord b, Eq a) => [Field a -> b] -> [Board a] -> [Board a]
-generateBoardSolutions accessors boardHistory =
-    if equals lastBoard newBoard
-    then boardHistory
-    else generateBoardSolutions (tail accessors) (boardHistory ++ [newBoard])
-    where lastBoard = last boardHistory
-          newBoard = solvePermutations (head accessors) lastBoard
+generateSolutionSteps :: (Ord b, Eq a) => Board a -> [Field a -> b] -> [Board a]
+generateSolutionSteps previousBoard [] = []
+generateSolutionSteps previousBoard (accessor:accessors) =
+    if equals previousBoard newBoard
+    then generateSolutionSteps newBoard accessors
+    else newBoard : generateSolutionSteps newBoard accessors
+    where newBoard = solvePermutations accessor previousBoard
 
-solve board = generateBoardSolutions accessorOrder [board]
-              where accessorOrder = r : c : b : accessorOrder
+generateBoardSolutions :: Eq a => [Board a] -> [Board a]
+generateBoardSolutions boardHistory =
+    if solutionSteps == []
+    then boardHistory
+    else generateBoardSolutions (boardHistory ++ solutionSteps)
+    where solutionSteps = generateSolutionSteps (last boardHistory) [r, c, b]
+
+solve board = generateBoardSolutions [board]
 
 -- Beware! Here be the lair of bad ugly monads. --
 
